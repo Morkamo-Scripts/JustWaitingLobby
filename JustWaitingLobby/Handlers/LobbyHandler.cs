@@ -82,6 +82,9 @@ public class LobbyHandler
         LobbyPlayerSettings settings = BuildPlayerSettings();
         foreach (Player player in Player.List)
             _playerController.ApplyLobbyState(player, settings, UpdateRoundStartVisibility);
+
+        if (_isMapLoaded)
+            _isMapLoaded = false;
     }
 
     public void OnRoundStarted()
