@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Linq;
 using Exiled.API.Features;
@@ -18,7 +18,7 @@ public class LobbyRoundStartController
     private bool _skipRoundStartInterception;
     private bool _isRoundStartBufferActive;
 
-    public void HandleRoundStarting(RoundStartingEventArgs ev, bool isWaitingForPlayers, Action onRoundStartBufferBegin, Action<Player> movePlayerToSpectator)
+    public void HandleRoundStarting(RoundStartingEventArgs ev, bool isWaitingForPlayers, Action onRoundStartBufferBegin, Action<Player> movePlayerToWaiting)
     {
         if (!ev.IsAllowed)
             return;
@@ -40,7 +40,7 @@ public class LobbyRoundStartController
         onRoundStartBufferBegin?.Invoke();
 
         StopRoundStartBuffer();
-        _roundStartBufferCoroutine = CoroutineRunner.Run(RoundStartBufferCoroutine(movePlayerToSpectator));
+        _roundStartBufferCoroutine = CoroutineRunner.Run(RoundStartBufferCoroutine(movePlayerToWaiting));
     }
 
     public void Reset()
@@ -59,7 +59,7 @@ public class LobbyRoundStartController
         _roundStartBufferCoroutine = null;
     }
 
-    private IEnumerator RoundStartBufferCoroutine(Action<Player> movePlayerToSpectator)
+    private IEnumerator RoundStartBufferCoroutine(Action<Player> movePlayerToWaiting)
     {
         if (MapUtils.TryGetMapData(Plugin.Instance.LobbyHandler.LobbyMapName, out var map))
         {
@@ -71,11 +71,12 @@ public class LobbyRoundStartController
 
         foreach (Player player in Player.List.ToList())
         {
+            player.IsUsingStamina = true;
             RoleTypeId role = player.Role.Type;
             if (role == RoleTypeId.Overwatch || role == RoleTypeId.Filmmaker)
                 continue;
 
-            movePlayerToSpectator?.Invoke(player);
+            movePlayerToWaiting?.Invoke(player);
         }
 
         yield return new WaitForSeconds(0.3f);

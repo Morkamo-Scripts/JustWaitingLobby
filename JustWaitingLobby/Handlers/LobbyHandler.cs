@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using Exiled.API.Enums;
@@ -6,6 +6,7 @@ using Exiled.API.Features;
 using Exiled.Events.EventArgs.Player;
 using GameCore;
 using JustWaitingLobby.Components;
+using LabApi.Events.Arguments.PlayerEvents;
 using LabApi.Events.Arguments.ServerEvents;
 using MEC;
 using PlayerRoles;
@@ -40,6 +41,12 @@ public class LobbyHandler
     [Description("Текст, когда запуск раунда приостановлен")]
     public string WaitingPlayersMessage { get; set; } = "<size=70><b>Ожидание игроков...</b></size>";
 
+    [Description("Дополнительное сообщение в лобби")]
+    public string AdditionalInfoMessage { get; set; } = "<b><size=40>Для перехода в наблюдатели нажмите кнопку использования Noclip.</b></size>";
+
+    [Description("Вертикальная позиция дополнительного сообщения RueI (Y)")]
+    public ushort AdditionalInfoVerticalPosition { get; set; } = 800;
+
     [Description("Автоматически ставить игрока в Tutorial в лобби")]
     public bool AutoSpawnTutorialInLobby { get; set; } = true;
 
@@ -69,6 +76,26 @@ public class LobbyHandler
         RoomType.EzShelter
     };
 
+    /* 
+    public void TogglingNoclipSwitcher(TogglingNoClipEventArgs ev)
+    {
+        if (!_isWaitingForPlayers)
+        {
+            if (!Round.IsStarted)
+                ev.IsAllowed = false;
+            return;
+        }
+
+        ev.IsAllowed = false;
+        RoleTypeId role = ev.Player.Role.Type == RoleTypeId.Tutorial
+            ? RoleTypeId.None
+            : RoleTypeId.Tutorial;
+        ev.Player.Role.Set(role, SpawnReason.ForceClass);
+        _playerController.ApplyLobbyState(ev.Player, BuildPlayerSettings(), UpdateRoundStartVisibility);
+        _timerController.SetVisible(ev.Player, ShowLobbyTimer && ev.Player.IsAlive);
+    }
+    */
+
     public void OnWaitingForPlayers()
     {
         _isWaitingForPlayers = true;
@@ -76,7 +103,8 @@ public class LobbyHandler
         _playerController.ClearTracking();
         _roundStartController.Reset();
 
-        _timerController.Start(ShowLobbyTimer, () => _isWaitingForPlayers, () => TimerVerticalPosition, BuildTimerText);
+        _timerController.Start(ShowLobbyTimer, () => _isWaitingForPlayers, () => TimerVerticalPosition, BuildTimerText,
+            () => AdditionalInfoVerticalPosition, () => AdditionalInfoMessage);
         _playerController.StartLobbyStateLoop(() => _isWaitingForPlayers, BuildPlayerSettings);
 
         LobbyPlayerSettings settings = BuildPlayerSettings();
@@ -85,6 +113,19 @@ public class LobbyHandler
 
         if (_isMapLoaded)
             _isMapLoaded = false;
+    }
+
+    public void OnRestartingRound()
+    {
+        _isWaitingForPlayers = false;
+        _isMapLoaded = false;
+
+        _timerController.Stop(clearDisplay: false);
+        _playerController.StopLobbyStateLoop();
+        _roundStartController.Reset();
+
+        _visibilityController.Clear();
+        _playerController.ClearTracking();
     }
 
     public void OnRoundStarted()
@@ -120,7 +161,9 @@ public class LobbyHandler
     public void OnInteractingDoor(InteractingDoorEventArgs ev)
     {
         if (Round.IsLobby)
+        {
             ev.IsAllowed = false;
+        }
     }
     
     public void OnInteractingElevator(InteractingElevatorEventArgs ev)
@@ -146,9 +189,17 @@ public class LobbyHandler
         if (!_isWaitingForPlayers)
             return;
 
+        _timerController.SetVisible(ev.Player, ShowLobbyTimer && ev.Player.IsAlive);
+
+        if (ev.Player.Role.Type == RoleTypeId.None)
+        {
+            _playerController.ApplyLobbyState(ev.Player, BuildPlayerSettings(), UpdateRoundStartVisibility);
+            return;
+        }
+
         if (AutoSpawnTutorialInLobby && _playerController.TryForceTutorialRole(ev.Player))
             return;
-
+        
         ev.Player.Rotation = new Quaternion(0, 0.7f, 0, 0.7f);
         _playerController.ApplyLobbyState(ev.Player, BuildPlayerSettings(), UpdateRoundStartVisibility);
     }
@@ -183,16 +234,16 @@ public class LobbyHandler
             ev,
             _isWaitingForPlayers,
             OnRoundStartBufferBegin,
-            MovePlayerToRoundStartSpectator);
+            MovePlayerToRoundStartWaiting);
     }
 
     private string BuildTimerText()
     {
-        if (Round.IsLobbyLocked || Round.LobbyWaitingTime <= 0)
-            return WaitingPlayersMessage;
-
         int seconds = Math.Max(0, Convert.ToInt32(Round.LobbyWaitingTime));
-        return TimerMessage.Replace("{seconds}", seconds.ToString());
+        string timer = Round.IsLobbyLocked || Round.LobbyWaitingTime <= 0
+            ? WaitingPlayersMessage
+            : TimerMessage.Replace("{seconds}", seconds.ToString());
+        return timer;
     }
 
     private LobbyPlayerSettings BuildPlayerSettings()
@@ -222,12 +273,13 @@ public class LobbyHandler
         _playerController.ClearTutorialSwitchTracking();
     }
 
-    private void MovePlayerToRoundStartSpectator(Player player)
+    private void MovePlayerToRoundStartWaiting(Player player)
     {
         try
         {
             _playerController.SetPlayerGodMode(player, false);
-            player.Role.Set(RoleTypeId.Spectator, SpawnReason.ForceClass, RoleSpawnFlags.None);
+            player.Role.Set(RoleTypeId.None, SpawnReason.ForceClass, RoleSpawnFlags.None);
+            _visibilityController.UpdateRoundStartVisibility(player, RoleTypeId.None, HideLobbyBanner, true);
         }
         catch (Exception e)
         {

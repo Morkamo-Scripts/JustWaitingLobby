@@ -22,7 +22,7 @@ public class LobbyVisibilityController
         if (!hideLobbyBanner || !isWaitingForPlayers)
             return;
 
-        if (role == RoleTypeId.Spectator || role == RoleTypeId.Overwatch)
+        if (role == RoleTypeId.None || role == RoleTypeId.Spectator || role == RoleTypeId.Overwatch)
         {
             TryShowRoundStartForPlayer(player);
             _hiddenPlayers.Remove(player.Id);
@@ -60,7 +60,13 @@ public class LobbyVisibilityController
 
     private static bool TryGetRoundStartIdentity(out NetworkIdentity identity)
     {
-        identity = RoundStart.singleton?.netIdentity;
+        identity = null;
+
+        RoundStart roundStart = RoundStart.singleton;
+        if (roundStart == null)
+            return false;
+
+        identity = roundStart.netIdentity;
         return identity != null;
     }
 

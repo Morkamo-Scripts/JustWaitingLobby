@@ -48,11 +48,13 @@ namespace JustWaitingLobby
         {
             events.Server.WaitingForPlayers += LobbyHandler.OnWaitingForPlayers;
             events.Server.RoundStarted += LobbyHandler.OnRoundStarted;
+            events.Server.RestartingRound += LobbyHandler.OnRestartingRound;
             labServerEvents.RoundStarting += LobbyHandler.OnRoundStarting;
             events.Player.Verified += LobbyHandler.OnVerified;
             events.Player.Spawned += LobbyHandler.OnSpawned;
             events.Player.ChangingRole += LobbyHandler.OnChangingRole;
             events.Player.Left += LobbyHandler.OnLeft;
+            // events.Player.TogglingNoClip += LobbyHandler.TogglingNoclipSwitcher;
             events.Player.InteractingDoor += LobbyHandler.OnInteractingDoor;
             events.Player.InteractingElevator += LobbyHandler.OnInteractingElevator;
             events.Player.DamagingWindow += LobbyHandler.OnDamagingWindow;
@@ -63,11 +65,13 @@ namespace JustWaitingLobby
         {
             events.Server.WaitingForPlayers -= LobbyHandler.OnWaitingForPlayers;
             events.Server.RoundStarted -= LobbyHandler.OnRoundStarted;
+            events.Server.RestartingRound -= LobbyHandler.OnRestartingRound;
             labServerEvents.RoundStarting -= LobbyHandler.OnRoundStarting;
             events.Player.Verified -= LobbyHandler.OnVerified;
             events.Player.Spawned -= LobbyHandler.OnSpawned;
             events.Player.ChangingRole -= LobbyHandler.OnChangingRole;
             events.Player.Left -= LobbyHandler.OnLeft;
+            // events.Player.TogglingNoClip -= LobbyHandler.TogglingNoclipSwitcher;
             events.Player.InteractingDoor -= LobbyHandler.OnInteractingDoor;
             events.Player.InteractingElevator -= LobbyHandler.OnInteractingElevator;
             events.Player.DamagingWindow -= LobbyHandler.OnDamagingWindow;

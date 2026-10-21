@@ -31,12 +31,14 @@ public class LobbyPlayerController
             return;
 
         RoleTypeId role = player.Role.Type;
-        if (role == RoleTypeId.Spectator || role == RoleTypeId.Overwatch)
+        if (role == RoleTypeId.None || role == RoleTypeId.Spectator || role == RoleTypeId.Overwatch)
         {
             SetPlayerGodMode(player, false);
             visibilityUpdate?.Invoke(player, role);
             return;
         }
+
+        player.IsUsingStamina = false;
 
         SetPlayerGodMode(player, settings.EnableLobbyGodMode && role == RoleTypeId.Tutorial);
 
